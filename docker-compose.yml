@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  trendradar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trendradar
+    restart: unless-stopped
+    environment:
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Notification settings
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      # Crawler settings
+      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-3600}
+      - MAX_RESULTS=${MAX_RESULTS:-50}
+      - LANGUAGE=${LANGUAGE:-en}
+      # Proxy settings (optional)
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - trendradar-net
+
+  # Optional: Redis for caching trend data
+  redis:
+    image: redis:7-alpine
+    container_name: trendradar-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - trendradar-net
+    profiles:
+      - with-cache
+
+volumes:
+  redis-data:
+
+networks:
+  trendradar-net:
+    driver: bridge
