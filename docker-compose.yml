@@ -18,8 +18,8 @@ services:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       # Crawler settings
-      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-3600}
-      - MAX_RESULTS=${MAX_RESULTS:-50}
+      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-1800}
+      - MAX_RESULTS=${MAX_RESULTS:-100}
       - LANGUAGE=${LANGUAGE:-en}
       # Proxy settings (optional)
       - HTTP_PROXY=${HTTP_PROXY:-}
