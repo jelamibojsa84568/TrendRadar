@@ -1,51 +1,88 @@
 version: '3.8'
 
 services:
-  trendradar:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: trendradar
-    restart: unless-stopped
-    environment:
-      # API Keys
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      # Notification settings
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
-      # Crawler settings
-      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-3600}
-      - MAX_RESULTS=${MAX_RESULTS:-50}
-      - LANGUAGE=${LANGUAGE:-en}
-      # Proxy settings (optional)
-      - HTTP_PROXY=${HTTP_PROXY:-}
-      - HTTPS_PROXY=${HTTPS_PROXY:-}
-    volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./logs:/app/logs
-    networks:
-      - trendradar-net
-
-  # Optional: Redis for caching trend data
+  # Redis for caching and task queue
   redis:
     image: redis:7-alpine
     container_name: trendradar-redis
     restart: unless-stopped
+    ports:
+      - "6379:6379"
     volumes:
-      - redis-data:/data
-    networks:
-      - trendradar-net
-    profiles:
-      - with-cache
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    container_name: trendradar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trendradar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trendradar}
+      POSTGRES_DB: ${POSTGRES_DB:-trendradar}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trendradar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Main TrendRadar application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trendradar-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-trendradar}:${POSTGRES_PASSWORD:-trendradar}@db:5432/${POSTGRES_DB:-trendradar}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production}
+      - DEBUG=${DEBUG:-false}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+
+  # Crawler worker service
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trendradar-crawler
+    restart: unless-stopped
+    command: python -m crawler.main
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-trendradar}:${POSTGRES_PASSWORD:-trendradar}@db:5432/${POSTGRES_DB:-trendradar}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
 
 volumes:
-  redis-data:
-
-networks:
-  trendradar-net:
-    driver: bridge
+  postgres_data:
+  redis_data:
