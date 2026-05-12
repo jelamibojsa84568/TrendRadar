@@ -51,7 +51,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-trendradar}:${POSTGRES_PASSWORD:-trendradar}@db:5432/${POSTGRES_DB:-trendradar}
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-changeme-in-production}
-      - DEBUG=${DEBUG:-false}
+      - DEBUG=${DEBUG:-true}  # default to true locally for easier debugging
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
     ports:
       - "8000:8000"
