@@ -77,7 +77,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-trendradar}:${POSTGRES_PASSWORD:-trendradar}@db:5432/${POSTGRES_DB:-trendradar}
       - REDIS_URL=redis://redis:6379/0
-      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-1800}  # crawl interval in seconds, default 30 min (was 1 hour, too slow for my use)
+      - CRAWL_INTERVAL=${CRAWL_INTERVAL:-900}  # crawl interval in seconds, default 15 min (30 min was still too slow for trending topics)
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
