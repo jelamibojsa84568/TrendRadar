@@ -52,8 +52,9 @@ class BaseCrawler(ABC):
 
     # Default request timeout in seconds
     DEFAULT_TIMEOUT: int = 15
-    # Default delay between retries in seconds
-    DEFAULT_RETRY_DELAY: int = 3
+    # Default delay between retries in seconds — bumped from 3 to 5 to be
+    # a bit more polite to upstream servers and avoid rate-limit responses
+    DEFAULT_RETRY_DELAY: int = 5
     # Maximum number of retry attempts
     MAX_RETRIES: int = 3
 
@@ -99,29 +100,4 @@ class BaseCrawler(ABC):
                     attempt,
                 )
                 return items
-            except Exception as exc:  # pylint: disable=broad-except
-                last_exception = exc
-                logger.warning(
-                    "[%s] Attempt %d failed: %s",
-                    self.platform,
-                    attempt,
-                    exc,
-                )
-                if attempt < self.MAX_RETRIES:
-                    time.sleep(self.DEFAULT_RETRY_DELAY)
-
-        raise CrawlerError(
-            f"[{self.platform}] All {self.MAX_RETRIES} fetch attempts failed."
-        ) from last_exception
-
-    @property
-    def name(self) -> str:
-        """Human-readable crawler name."""
-        return self.platform.capitalize()
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__} platform={self.platform!r}>"
-
-
-class CrawlerError(Exception):
-    """Raised when a crawler fails to retrieve data."""
+            except Exception as exc:  # p
